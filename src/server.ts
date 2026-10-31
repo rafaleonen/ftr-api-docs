@@ -2,10 +2,18 @@ import { fastifyCors } from "@fastify/cors";
 import { fastifySwagger } from "@fastify/swagger";
 import scalarUI from "@scalar/fastify-api-reference";
 import { fastify } from "fastify";
+import {
+  jsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 import { creatUsersRoute } from "./routes/create-user-route.ts";
 import { getUsersRoute } from "./routes/get-users-route.ts";
 
 const app = fastify();
+
+app.setValidatorCompiler(validatorCompiler);
+app.setSerializerCompiler(serializerCompiler);
 
 app.register(fastifyCors, {
   origin: "*",
@@ -17,7 +25,19 @@ app.register(fastifySwagger, {
       title: "Example API Docs",
       version: "1.0.0",
     },
+
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
   },
+
+  transform: jsonSchemaTransform,
 });
 
 app.get("/openai.json", () => app.swagger());

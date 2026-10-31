@@ -1,47 +1,44 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import z from "zod";
 
-export const creatUsersRoute: FastifyPluginAsync = async (app) => {
+export const creatUsersRoute: FastifyPluginAsyncZod = async (app) => {
   app.post(
     "/users",
     {
       schema: {
+        tags: ["Users"],
         summary: "Create an user",
-        body: {
-          type: "object",
-          examples: [
-            {
-              name: "John Doe",
-              email: "jhon.doe@example.com",
-            },
-          ],
-          properties: {
-            name: {
-              type: ["string", "null"],
-              maxLength: 100,
-            },
-            email: {
-              type: "string",
-              format: "email",
-            },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        body: z.object({
+          name: z.string().nullable(),
+          email: z.email(),
+        }),
         response: {
-          201: {
-            description: "User created",
-            type: "object",
-            properties: {
-              userId: {
-                type: "string",
-                format: "uuid",
-                description: "User created",
-              },
-            },
-          },
+          201: z
+            .object({
+              userId: z.uuid().describe("New user ID"),
+            })
+            .describe("User created"),
+          400: z
+            .object({
+              errors: z.array(
+                z.object({
+                  name: z.string(),
+                  error: z.string(),
+                })
+              ),
+            })
+            .describe("Validation failed"),
+          409: z
+            .object({
+              message: z.string(),
+            })
+            .describe("User email already in use"),
         },
       },
     },
-    () => {
-      return { userId: "123" };
+    async (_, reply) => {
+      return reply.status(201).send({ userId: "123" });
     }
   );
 };
